@@ -41,22 +41,24 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.support.v4.view.ViewPager.OnPageChangeListener;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import net.fred.feedex.Constants;
 import net.fred.feedex.MainApplication;
 import net.fred.feedex.R;
+import net.fred.feedex.R.drawable;
+import net.fred.feedex.R.string;
 import net.fred.feedex.activity.BaseActivity;
 import net.fred.feedex.provider.FeedData;
-import net.fred.feedex.provider.FeedData.EntryColumns;
-import net.fred.feedex.provider.FeedData.FeedColumns;
 import net.fred.feedex.service.FetcherService;
 import net.fred.feedex.utils.PrefUtils;
 import net.fred.feedex.utils.UiUtils;
@@ -69,7 +71,7 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
     private static final String STATE_ENTRIES_IDS = "STATE_ENTRIES_IDS";
     private static final String STATE_INITIAL_ENTRY_ID = "STATE_INITIAL_ENTRY_ID";
 
-    private int mTitlePos = -1, mDatePos, mMobilizedHtmlPos, mAbstractPos, mLinkPos, mIsFavoritePos, mIsReadPos, mEnclosurePos, mAuthorPos, mFeedNamePos, mFeedUrlPos, mFeedIconPos;
+    private int mTitlePos = -1, mDatePos, mMobilizedHtmlPos, mAbstractPos, mLinkPos, mIsFavoritePos, mIsReadPos, mEnclosurePos, mAuthorPos, mFeedNamePos, mFeedUrlPos;
 
     private int mCurrentPagerPos = -1;
     private Uri mBaseUri;
@@ -97,38 +99,38 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
         View rootView = inflater.inflate(R.layout.fragment_entry, container, true);
 
         mCancelFullscreenBtn = rootView.findViewById(R.id.cancelFullscreenBtn);
-        mCancelFullscreenBtn.setOnClickListener(new View.OnClickListener() {
+        this.mCancelFullscreenBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                setImmersiveFullScreen(false);
+                EntryFragment.this.setImmersiveFullScreen(false);
             }
         });
 
-        mEntryPager = rootView.findViewById(R.id.pager);
+        this.mEntryPager = rootView.findViewById(R.id.pager);
         //mEntryPager.setPageTransformer(true, new DepthPageTransformer());
-        mEntryPager.setAdapter(mEntryPagerAdapter);
+        this.mEntryPager.setAdapter(this.mEntryPagerAdapter);
 
         if (savedInstanceState != null) {
-            mBaseUri = savedInstanceState.getParcelable(STATE_BASE_URI);
-            mEntriesIds = savedInstanceState.getLongArray(STATE_ENTRIES_IDS);
-            mInitialEntryId = savedInstanceState.getLong(STATE_INITIAL_ENTRY_ID);
-            mCurrentPagerPos = savedInstanceState.getInt(STATE_CURRENT_PAGER_POS);
-            mEntryPager.getAdapter().notifyDataSetChanged();
-            mEntryPager.setCurrentItem(mCurrentPagerPos);
+            this.mBaseUri = savedInstanceState.getParcelable(EntryFragment.STATE_BASE_URI);
+            this.mEntriesIds = savedInstanceState.getLongArray(EntryFragment.STATE_ENTRIES_IDS);
+            this.mInitialEntryId = savedInstanceState.getLong(EntryFragment.STATE_INITIAL_ENTRY_ID);
+            this.mCurrentPagerPos = savedInstanceState.getInt(EntryFragment.STATE_CURRENT_PAGER_POS);
+            this.mEntryPager.getAdapter().notifyDataSetChanged();
+            this.mEntryPager.setCurrentItem(this.mCurrentPagerPos);
         }
 
-        mEntryPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+        this.mEntryPager.addOnPageChangeListener(new OnPageChangeListener() {
             @Override
             public void onPageScrolled(int i, float v, int i2) {
             }
 
             @Override
             public void onPageSelected(int i) {
-                mCurrentPagerPos = i;
-                mEntryPagerAdapter.onPause(); // pause all webviews
-                mEntryPagerAdapter.onResume(); // resume the current webview
+                EntryFragment.this.mCurrentPagerPos = i;
+                EntryFragment.this.mEntryPagerAdapter.onPause(); // pause all webviews
+                EntryFragment.this.mEntryPagerAdapter.onResume(); // resume the current webview
 
-                refreshUI(mEntryPagerAdapter.getCursor(i));
+                EntryFragment.this.refreshUI(EntryFragment.this.mEntryPagerAdapter.getCursor(i));
             }
 
             @Override
@@ -136,17 +138,17 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
             }
         });
 
-        disableSwipe();
+        this.disableSwipe();
 
         return rootView;
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        outState.putParcelable(STATE_BASE_URI, mBaseUri);
-        outState.putLongArray(STATE_ENTRIES_IDS, mEntriesIds);
-        outState.putLong(STATE_INITIAL_ENTRY_ID, mInitialEntryId);
-        outState.putInt(STATE_CURRENT_PAGER_POS, mCurrentPagerPos);
+        outState.putParcelable(EntryFragment.STATE_BASE_URI, this.mBaseUri);
+        outState.putLongArray(EntryFragment.STATE_ENTRIES_IDS, this.mEntriesIds);
+        outState.putLong(EntryFragment.STATE_INITIAL_ENTRY_ID, this.mInitialEntryId);
+        outState.putInt(EntryFragment.STATE_CURRENT_PAGER_POS, this.mCurrentPagerPos);
 
         super.onSaveInstanceState(outState);
     }
@@ -160,7 +162,7 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
 
     @Override
     public void onDetach() {
-        ((BaseActivity) getActivity()).setOnFullscreenListener(null);
+        ((BaseActivity) this.getActivity()).setOnFullscreenListener(null);
 
         super.onDetach();
     }
@@ -168,28 +170,28 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
     @Override
     public void onResume() {
         super.onResume();
-        mEntryPagerAdapter.onResume();
+        this.mEntryPagerAdapter.onResume();
 
-        if (((BaseActivity) getActivity()).isFullScreen()) {
-            mCancelFullscreenBtn.setVisibility(View.VISIBLE);
+        if (((BaseActivity) this.getActivity()).isFullScreen()) {
+            this.mCancelFullscreenBtn.setVisibility(View.VISIBLE);
         } else {
-            mCancelFullscreenBtn.setVisibility(View.GONE);
+            this.mCancelFullscreenBtn.setVisibility(View.GONE);
         }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        mEntryPagerAdapter.onPause();
+        this.mEntryPagerAdapter.onPause();
     }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        inflater.inflate(R.menu.entry, menu);
+        inflater.inflate(menu.entry, menu);
 
-        if (mFavorite) {
+        if (this.mFavorite) {
             MenuItem item = menu.findItem(R.id.menu_star);
-            item.setTitle(R.string.menu_unstar).setIcon(R.drawable.rating_important);
+            item.setTitle(string.menu_unstar).setIcon(drawable.rating_important);
         }
 
         super.onCreateOptionsMenu(menu, inflater);
@@ -197,25 +199,25 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if (mEntriesIds != null) {
-            Activity activity = getActivity();
+        if (this.mEntriesIds != null) {
+            Activity activity = this.getActivity();
 
             switch (item.getItemId()) {
                 case R.id.menu_star: {
-                    mFavorite = !mFavorite;
+                    this.mFavorite = !this.mFavorite;
 
-                    if (mFavorite) {
-                        item.setTitle(R.string.menu_unstar).setIcon(R.drawable.rating_important);
+                    if (this.mFavorite) {
+                        item.setTitle(string.menu_unstar).setIcon(drawable.rating_important);
                     } else {
-                        item.setTitle(R.string.menu_star).setIcon(R.drawable.rating_not_important);
+                        item.setTitle(string.menu_star).setIcon(drawable.rating_not_important);
                     }
 
-                    final Uri uri = ContentUris.withAppendedId(mBaseUri, mEntriesIds[mCurrentPagerPos]);
+                    final Uri uri = ContentUris.withAppendedId(this.mBaseUri, this.mEntriesIds[this.mCurrentPagerPos]);
                     new Thread() {
                         @Override
                         public void run() {
                             ContentValues values = new ContentValues();
-                            values.put(EntryColumns.IS_FAVORITE, mFavorite ? 1 : 0);
+                            values.put(FeedData.EntryColumns.IS_FAVORITE, mFavorite ? 1 : 0);
                             ContentResolver cr = MainApplication.getContext().getContentResolver();
                             cr.update(uri, values, null, null);
 
@@ -287,8 +289,8 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
             String entriesOrder = PrefUtils.getBoolean(PrefUtils.DISPLAY_OLDEST_FIRST, false) ? Constants.DB_ASC : Constants.DB_DESC;
 
             // Load the entriesIds list. Should be in a loader... but I was too lazy to do so
-            Cursor entriesCursor = MainApplication.getContext().getContentResolver().query(mBaseUri, EntryColumns.PROJECTION_ID,
-                    null, null, EntryColumns.DATE + entriesOrder);
+            Cursor entriesCursor = MainApplication.getContext().getContentResolver().query(mBaseUri, FeedData.EntryColumns.PROJECTION_ID,
+                    null, null, FeedData.EntryColumns.DATE + entriesOrder);
 
             if (entriesCursor != null && entriesCursor.getCount() > 0) {
                 mEntriesIds = new long[entriesCursor.getCount()];
@@ -481,7 +483,7 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        CursorLoader cursorLoader = new CursorLoader(getActivity(), EntryColumns.CONTENT_URI(mEntriesIds[id]), null, null, null, null);
+        CursorLoader cursorLoader = new CursorLoader(getActivity(), FeedData.EntryColumns.CONTENT_URI(mEntriesIds[id]), null, null, null, null);
         cursorLoader.setUpdateThrottle(1000);
         return cursorLoader;
     }
@@ -492,42 +494,41 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
             cursor.moveToFirst();
 
             if (mTitlePos == -1) {
-                mTitlePos = cursor.getColumnIndex(EntryColumns.TITLE);
-                mDatePos = cursor.getColumnIndex(EntryColumns.DATE);
-                mAbstractPos = cursor.getColumnIndex(EntryColumns.ABSTRACT);
-                mMobilizedHtmlPos = cursor.getColumnIndex(EntryColumns.MOBILIZED_HTML);
-                mLinkPos = cursor.getColumnIndex(EntryColumns.LINK);
-                mIsFavoritePos = cursor.getColumnIndex(EntryColumns.IS_FAVORITE);
-                mIsReadPos = cursor.getColumnIndex(EntryColumns.IS_READ);
-                mEnclosurePos = cursor.getColumnIndex(EntryColumns.ENCLOSURE);
-                mAuthorPos = cursor.getColumnIndex(EntryColumns.AUTHOR);
-                mFeedNamePos = cursor.getColumnIndex(FeedColumns.NAME);
-                mFeedUrlPos = cursor.getColumnIndex(FeedColumns.URL);
-                mFeedIconPos = cursor.getColumnIndex(FeedColumns.ICON);
+                mTitlePos = cursor.getColumnIndex(FeedData.EntryColumns.TITLE);
+                mDatePos = cursor.getColumnIndex(FeedData.EntryColumns.DATE);
+                mAbstractPos = cursor.getColumnIndex(FeedData.EntryColumns.ABSTRACT);
+                mMobilizedHtmlPos = cursor.getColumnIndex(FeedData.EntryColumns.MOBILIZED_HTML);
+                mLinkPos = cursor.getColumnIndex(FeedData.EntryColumns.LINK);
+                mIsFavoritePos = cursor.getColumnIndex(FeedData.EntryColumns.IS_FAVORITE);
+                mIsReadPos = cursor.getColumnIndex(FeedData.EntryColumns.IS_READ);
+                mEnclosurePos = cursor.getColumnIndex(FeedData.EntryColumns.ENCLOSURE);
+                mAuthorPos = cursor.getColumnIndex(FeedData.EntryColumns.AUTHOR);
+                this.mFeedNamePos = cursor.getColumnIndex(FeedData.FeedColumns.NAME);
+                mFeedUrlPos = cursor.getColumnIndex(FeedData.FeedColumns.URL);
             }
 
             int position = loader.getId();
             if (position != -1) {
-                mEntryPagerAdapter.displayEntry(position, cursor, false);
+                this.mEntryPagerAdapter.displayEntry(position, cursor, false);
             }
         }
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
-        mEntryPagerAdapter.setUpdatedCursor(loader.getId(), null);
+        this.mEntryPagerAdapter.setUpdatedCursor(loader.getId(), null);
     }
 
     @Override
     public void onFullScreenEnabled(boolean isImmersive, boolean isImmersiveFallback) {
         if (!isImmersive && isImmersiveFallback) {
-            mCancelFullscreenBtn.setVisibility(View.VISIBLE);
+            this.mCancelFullscreenBtn.setVisibility(View.VISIBLE);
         }
     }
 
     @Override
     public void onFullScreenDisabled() {
-        mCancelFullscreenBtn.setVisibility(View.GONE);
+        this.mCancelFullscreenBtn.setVisibility(View.GONE);
     }
 
     @Override
@@ -544,24 +545,24 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
 
         @Override
         public int getCount() {
-            return mEntriesIds != null ? mEntriesIds.length : 0;
+            return EntryFragment.this.mEntriesIds != null ? EntryFragment.this.mEntriesIds.length : 0;
         }
 
         @Override
         public Object instantiateItem(ViewGroup container, int position) {
-            EntryView view = new EntryView(getActivity());
-            mEntryViews.put(position, view);
+            EntryView view = new EntryView(EntryFragment.this.getActivity());
+            this.mEntryViews.put(position, view);
             container.addView(view);
             view.setListener(EntryFragment.this);
-            getLoaderManager().restartLoader(position, null, EntryFragment.this);
+            EntryFragment.this.getLoaderManager().restartLoader(position, null, EntryFragment.this);
             return view;
         }
 
         @Override
         public void destroyItem(ViewGroup container, int position, Object object) {
-            getLoaderManager().destroyLoader(position);
+            EntryFragment.this.getLoaderManager().destroyLoader(position);
             container.removeView((View) object);
-            mEntryViews.delete(position);
+            this.mEntryViews.delete(position);
         }
 
         @Override
@@ -570,42 +571,42 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
         }
 
         public void displayEntry(int pagerPos, Cursor newCursor, boolean forceUpdate) {
-            EntryView view = mEntryViews.get(pagerPos);
+            EntryView view = this.mEntryViews.get(pagerPos);
             if (view != null) {
                 if (newCursor == null) {
                     newCursor = (Cursor) view.getTag(); // get the old one
                 }
 
                 if (newCursor != null && newCursor.moveToFirst()) {
-                    String contentText = newCursor.getString(mMobilizedHtmlPos);
-                    if (contentText == null || (forceUpdate && !mPreferFullText)) {
-                        mPreferFullText = false;
-                        contentText = newCursor.getString(mAbstractPos);
+                    String contentText = newCursor.getString(EntryFragment.this.mMobilizedHtmlPos);
+                    if (contentText == null || (forceUpdate && !EntryFragment.this.mPreferFullText)) {
+                        EntryFragment.this.mPreferFullText = false;
+                        contentText = newCursor.getString(EntryFragment.this.mAbstractPos);
                     } else {
-                        mPreferFullText = true;
+                        EntryFragment.this.mPreferFullText = true;
                     }
                     if (contentText == null) {
                         contentText = "";
                     }
 
-                    String author = newCursor.getString(mAuthorPos);
-                    long timestamp = newCursor.getLong(mDatePos);
-                    String link = newCursor.getString(mLinkPos);
-                    String title = newCursor.getString(mTitlePos);
-                    String enclosure = newCursor.getString(mEnclosurePos);
+                    String author = newCursor.getString(EntryFragment.this.mAuthorPos);
+                    long timestamp = newCursor.getLong(EntryFragment.this.mDatePos);
+                    String link = newCursor.getString(EntryFragment.this.mLinkPos);
+                    String title = newCursor.getString(EntryFragment.this.mTitlePos);
+                    String enclosure = newCursor.getString(EntryFragment.this.mEnclosurePos);
 
-                    view.setHtml(mEntriesIds[pagerPos], title, link, contentText, enclosure, author, timestamp, mPreferFullText);
+                    view.setHtml(EntryFragment.this.mEntriesIds[pagerPos], title, link, contentText, enclosure, author, timestamp, EntryFragment.this.mPreferFullText);
                     view.setTag(newCursor);
 
-                    if (pagerPos == mCurrentPagerPos) {
-                        refreshUI(newCursor);
+                    if (pagerPos == EntryFragment.this.mCurrentPagerPos) {
+                        EntryFragment.this.refreshUI(newCursor);
                     }
                 }
             }
         }
 
         public Cursor getCursor(int pagerPos) {
-            EntryView view = mEntryViews.get(pagerPos);
+            EntryView view = this.mEntryViews.get(pagerPos);
             if (view != null) {
                 return (Cursor) view.getTag();
             }
@@ -613,7 +614,7 @@ public class EntryFragment extends SwipeRefreshFragment implements BaseActivity.
         }
 
         public void setUpdatedCursor(int pagerPos, Cursor newCursor) {
-            EntryView view = mEntryViews.get(pagerPos);
+            EntryView view = this.mEntryViews.get(pagerPos);
             if (view != null) {
                 Cursor previousUpdatedOne = (Cursor) view.getTag(R.id.updated_cursor);
                 if (previousUpdatedOne != null) {

@@ -88,7 +88,7 @@ public class NetworkUtils {
                 IMAGE_FOLDER_FILE.mkdir(); // create images dir
 
                 // Compute the real URL (without "&eacute;", ...)
-                String realUrl = Html.fromHtml(imgUrl).toString();
+                String realUrl = Html.fromHtml(imgUrl, Html.FROM_HTML_MODE_LEGACY).toString();
                 imgURLConnection = setupConnection(realUrl);
 
                 FileOutputStream fileOutput = new FileOutputStream(tempImgPath);
