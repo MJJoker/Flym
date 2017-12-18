@@ -1,6 +1,8 @@
 buildscript {
     repositories {
-        maven { url "https://maven.google.com" } // Gradle < 4.0
+        maven {
+             url 'https://maven.google.com'
+        }
     }
 
     dependencies {
@@ -20,6 +22,11 @@ android {
         versionCode 62
         versionName "1.9.5"
     }
+
+    dexOptions {
+        javaMaxHeapSize "4g"
+    }
+
     lintOptions {
         // if true, stop the gradle build if errors are found
         abortOnError true

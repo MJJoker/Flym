@@ -183,6 +183,7 @@ public class EntriesListFragment extends SwipeRefreshListFragment {
         }
 
         mListView = rootView.findViewById(android.R.id.list);
+        mListView.setOnTouchListener(new SwipeGestureListener(mListView.getContext()));
         UiUtils.addEmptyFooterView(mListView, 90);
 
         mRefreshListBtn = rootView.findViewById(R.id.refreshListBtn);
