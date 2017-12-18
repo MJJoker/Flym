@@ -37,14 +37,18 @@ public class StringUtils {
 
     private static final DateFormat TIME_FORMAT = android.text.format.DateFormat.getTimeFormat(MainApplication.getContext());
     private static final int SIX_HOURS = 21600000; // six hours in milliseconds
-    private static DateFormat DATE_SHORT_FORMAT;
+    private static DateFormat DATE_SHORT_FORMAT = null;
 
     static {
         // getBestTimePattern() is only available in API 18 and up (Android 4.3 and better)
-        DATE_SHORT_FORMAT = new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(MainApplication.getContext().getResources().getConfiguration().getLocales().get(0), "d MMM"));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            DATE_SHORT_FORMAT = new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(MainApplication.getContext().getResources().getConfiguration().locale, "d MMM"));
+        } else {
+            DATE_SHORT_FORMAT = android.text.format.DateFormat.getDateFormat(MainApplication.getContext());
+        }
     }
 
-    public static String getDateTimeString(long timestamp) {
+    static public String getDateTimeString(long timestamp) {
         String outString;
 
         Date date = new Date(timestamp);

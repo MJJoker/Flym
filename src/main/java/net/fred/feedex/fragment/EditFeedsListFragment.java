@@ -50,7 +50,6 @@ import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -78,7 +77,7 @@ import net.fred.feedex.MainApplication;
 import net.fred.feedex.R;
 import net.fred.feedex.adapter.FeedsCursorAdapter;
 import net.fred.feedex.parser.OPML;
-import net.fred.feedex.provider.FeedData;
+import net.fred.feedex.provider.FeedData.FeedColumns;
 import net.fred.feedex.utils.UiUtils;
 import net.fred.feedex.view.DragNDropExpandableListView;
 import net.fred.feedex.view.DragNDropListener;
@@ -101,7 +100,7 @@ public class EditFeedsListFragment extends ListFragment {
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
             // Inflate a menu resource providing context menu items
             MenuInflater inflater = mode.getMenuInflater();
-            inflater.inflate(menu.feed_context_menu, menu);
+            inflater.inflate(R.menu.feed_context_menu, menu);
             return true;
         }
 
@@ -118,11 +117,11 @@ public class EditFeedsListFragment extends ListFragment {
             @SuppressWarnings("unchecked")
             Pair<Long, String> tag = (Pair<Long, String>) mode.getTag();
             final long feedId = tag.first;
-            String title = tag.second;
+            final String title = tag.second;
 
             switch (item.getItemId()) {
                 case R.id.menu_edit:
-                    EditFeedsListFragment.this.startActivity(new Intent(Intent.ACTION_EDIT).setData(FeedData.FeedColumns.CONTENT_URI(feedId)));
+                    startActivity(new Intent(Intent.ACTION_EDIT).setData(FeedColumns.CONTENT_URI(feedId)));
 
                     mode.finish(); // Action picked, so close the CAB
                     return true;
@@ -138,7 +137,7 @@ public class EditFeedsListFragment extends ListFragment {
                                         @Override
                                         public void run() {
                                             ContentResolver cr = getActivity().getContentResolver();
-                                            cr.delete(FeedData.FeedColumns.CONTENT_URI(feedId), null, null);
+                                            cr.delete(FeedColumns.CONTENT_URI(feedId), null, null);
                                         }
                                     }.start();
                                 }
@@ -203,8 +202,8 @@ public class EditFeedsListFragment extends ListFragment {
                                             if (!groupName.isEmpty()) {
                                                 ContentResolver cr = getActivity().getContentResolver();
                                                 ContentValues values = new ContentValues();
-                                                values.put(FeedData.FeedColumns.NAME, groupName);
-                                                cr.update(FeedData.FeedColumns.CONTENT_URI(groupId), values, null, null);
+                                                values.put(FeedColumns.NAME, groupName);
+                                                cr.update(FeedColumns.CONTENT_URI(groupId), values, null, null);
                                             }
                                         }
                                     }.start();
@@ -225,7 +224,7 @@ public class EditFeedsListFragment extends ListFragment {
                                         @Override
                                         public void run() {
                                             ContentResolver cr = getActivity().getContentResolver();
-                                            cr.delete(FeedData.FeedColumns.GROUPS_CONTENT_URI(groupId), null, null);
+                                            cr.delete(FeedColumns.GROUPS_CONTENT_URI(groupId), null, null);
                                         }
                                     }.start();
                                 }
@@ -263,7 +262,7 @@ public class EditFeedsListFragment extends ListFragment {
         mListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
             @Override
             public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
-                startActivity(new Intent(Intent.ACTION_EDIT).setData(FeedData.FeedColumns.CONTENT_URI(id)));
+                startActivity(new Intent(Intent.ACTION_EDIT).setData(FeedColumns.CONTENT_URI(id)));
                 return true;
             }
         });
@@ -271,7 +270,7 @@ public class EditFeedsListFragment extends ListFragment {
             @Override
             public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
                 if (v.findViewById(R.id.indicator).getVisibility() != View.VISIBLE) { // This is no a real group
-                    startActivity(new Intent(Intent.ACTION_EDIT).setData(FeedData.FeedColumns.CONTENT_URI(id)));
+                    startActivity(new Intent(Intent.ACTION_EDIT).setData(FeedColumns.CONTENT_URI(id)));
                     return true;
                 }
                 return false;
@@ -303,7 +302,7 @@ public class EditFeedsListFragment extends ListFragment {
             }
         });
 
-        mListView.setAdapter(new FeedsCursorAdapter(getActivity(), FeedData.FeedColumns.GROUPS_CONTENT_URI));
+        mListView.setAdapter(new FeedsCursorAdapter(getActivity(), FeedColumns.GROUPS_CONTENT_URI));
 
         mListView.setDragNDropListener(new DragNDropListener() {
             boolean fromHasGroupIndicator = false;
@@ -338,12 +337,12 @@ public class EditFeedsListFragment extends ListFragment {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     ContentValues values = new ContentValues();
-                                    values.put(FeedData.FeedColumns.PRIORITY, 1);
-                                    values.put(FeedData.FeedColumns.GROUP_ID, mListView.getItemIdAtPosition(flatPosTo));
+                                    values.put(FeedColumns.PRIORITY, 1);
+                                    values.put(FeedColumns.GROUP_ID, mListView.getItemIdAtPosition(flatPosTo));
 
                                     ContentResolver cr = getActivity().getContentResolver();
-                                    cr.update(FeedData.FeedColumns.CONTENT_URI(mListView.getItemIdAtPosition(flatPosFrom)), values, null, null);
-                                    cr.notifyChange(FeedData.FeedColumns.GROUPS_CONTENT_URI, null);
+                                    cr.update(FeedColumns.CONTENT_URI(mListView.getItemIdAtPosition(flatPosFrom)), values, null, null);
+                                    cr.notifyChange(FeedColumns.GROUPS_CONTENT_URI, null);
                                 }
                             }).setNegativeButton(R.string.to_group_above, new DialogInterface.OnClickListener() {
                         @Override
@@ -370,19 +369,19 @@ public class EditFeedsListFragment extends ListFragment {
         ContentResolver cr = getActivity().getContentResolver();
 
         if (fromIsGroup && toIsGroup) {
-            values.put(FeedData.FeedColumns.PRIORITY, packedGroupPosTo + 1);
-            cr.update(FeedData.FeedColumns.CONTENT_URI(mListView.getItemIdAtPosition(flatPosFrom)), values, null, null);
+            values.put(FeedColumns.PRIORITY, packedGroupPosTo + 1);
+            cr.update(FeedColumns.CONTENT_URI(mListView.getItemIdAtPosition(flatPosFrom)), values, null, null);
         } else if (!fromIsGroup && toIsGroup) {
-            values.put(FeedData.FeedColumns.PRIORITY, packedGroupPosTo + 1);
-            values.putNull(FeedData.FeedColumns.GROUP_ID);
-            cr.update(FeedData.FeedColumns.CONTENT_URI(mListView.getItemIdAtPosition(flatPosFrom)), values, null, null);
+            values.put(FeedColumns.PRIORITY, packedGroupPosTo + 1);
+            values.putNull(FeedColumns.GROUP_ID);
+            cr.update(FeedColumns.CONTENT_URI(mListView.getItemIdAtPosition(flatPosFrom)), values, null, null);
         } else if ((!fromIsGroup && !toIsGroup) || (fromIsFeedWithoutGroup && !toIsGroup)) {
             int groupPrio = ExpandableListView.getPackedPositionChild(packedPosTo) + 1;
-            values.put(FeedData.FeedColumns.PRIORITY, groupPrio);
+            values.put(FeedColumns.PRIORITY, groupPrio);
 
             int flatGroupPosTo = mListView.getFlatListPosition(ExpandableListView.getPackedPositionForGroup(packedGroupPosTo));
-            values.put(FeedData.FeedColumns.GROUP_ID, mListView.getItemIdAtPosition(flatGroupPosTo));
-            cr.update(FeedData.FeedColumns.CONTENT_URI(mListView.getItemIdAtPosition(flatPosFrom)), values, null, null);
+            values.put(FeedColumns.GROUP_ID, mListView.getItemIdAtPosition(flatGroupPosTo));
+            cr.update(FeedColumns.CONTENT_URI(mListView.getItemIdAtPosition(flatPosFrom)), values, null, null);
         }
     }
 
@@ -402,7 +401,7 @@ public class EditFeedsListFragment extends ListFragment {
     public boolean onOptionsItemSelected(final MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_add_feed: {
-                startActivity(new Intent(Intent.ACTION_INSERT).setData(FeedData.FeedColumns.CONTENT_URI));
+                startActivity(new Intent(Intent.ACTION_INSERT).setData(FeedColumns.CONTENT_URI));
                 return true;
             }
             case R.id.menu_add_group: {
@@ -422,9 +421,9 @@ public class EditFeedsListFragment extends ListFragment {
                                         if (!groupName.isEmpty()) {
                                             ContentResolver cr = getActivity().getContentResolver();
                                             ContentValues values = new ContentValues();
-                                            values.put(FeedData.FeedColumns.IS_GROUP, true);
-                                            values.put(FeedData.FeedColumns.NAME, groupName);
-                                            cr.insert(FeedData.FeedColumns.GROUPS_CONTENT_URI, values);
+                                            values.put(FeedColumns.IS_GROUP, true);
+                                            values.put(FeedColumns.NAME, groupName);
+                                            cr.insert(FeedColumns.GROUPS_CONTENT_URI, values);
                                         }
                                     }
                                 }.start();
@@ -433,21 +432,21 @@ public class EditFeedsListFragment extends ListFragment {
                 return true;
             }
             case R.id.menu_export:
-            case R.id.menu_import:
+            case R.id.menu_import: {
                 if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     // Should we show an explanation?
-                    if (ActivityCompat.shouldShowRequestPermissionRationale(this.getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
 
                         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-                        builder.setMessage(R.string.storage_request_explanation).setPositiveButton(android.R.string.ok, new OnClickListener() {
+                        builder.setMessage(R.string.storage_request_explanation).setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int id) {
-                                if (item.getItemId() == id.menu_export) {
-                                    ActivityCompat.requestPermissions(EditFeedsListFragment.this.getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, EditFeedsListFragment.PERMISSIONS_REQUEST_EXPORT_TO_OPML);
-                                } else if (item.getItemId() == id.menu_import) {
-                                    ActivityCompat.requestPermissions(EditFeedsListFragment.this.getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, EditFeedsListFragment.PERMISSIONS_REQUEST_IMPORT_FROM_OPML);
+                                if (item.getItemId() == R.id.menu_export) {
+                                    ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_EXPORT_TO_OPML);
+                                } else if (item.getItemId() == R.id.menu_import) {
+                                    ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_IMPORT_FROM_OPML);
                                 }
                             }
-                        }).setNegativeButton(android.R.string.cancel, new OnClickListener() {
+                        }).setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int id) {
                                 // User cancelled the dialog
                             }
@@ -456,20 +455,21 @@ public class EditFeedsListFragment extends ListFragment {
                     } else {
                         // No explanation needed, we can request the permission.
                         if (item.getItemId() == R.id.menu_export) {
-                            ActivityCompat.requestPermissions(this.getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, EditFeedsListFragment.PERMISSIONS_REQUEST_EXPORT_TO_OPML);
+                            ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_EXPORT_TO_OPML);
                         } else if (item.getItemId() == R.id.menu_import) {
-                            ActivityCompat.requestPermissions(this.getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, EditFeedsListFragment.PERMISSIONS_REQUEST_IMPORT_FROM_OPML);
+                            ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_IMPORT_FROM_OPML);
                         }
                     }
                 } else {
                     if (item.getItemId() == R.id.menu_export) {
-                        this.exportToOpml();
+                        exportToOpml();
                     } else if (item.getItemId() == R.id.menu_import) {
-                        this.importFromOpml();
+                        importFromOpml();
                     }
                 }
 
                 return true;
+            }
         }
 
         return super.onOptionsItemSelected(item);
@@ -478,23 +478,26 @@ public class EditFeedsListFragment extends ListFragment {
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case EditFeedsListFragment.PERMISSIONS_REQUEST_EXPORT_TO_OPML:
+            case PERMISSIONS_REQUEST_EXPORT_TO_OPML: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    this.exportToOpml();
+                    exportToOpml();
                 }
                 return;
-            case EditFeedsListFragment.PERMISSIONS_REQUEST_IMPORT_FROM_OPML:
+            }
+            case PERMISSIONS_REQUEST_IMPORT_FROM_OPML: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    this.importFromOpml();
+                    importFromOpml();
                 }
+                return;
+            }
         }
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, final Intent data) {
-        if (requestCode == EditFeedsListFragment.REQUEST_PICK_OPML_FILE) {
+        if (requestCode == REQUEST_PICK_OPML_FILE) {
             if (resultCode == Activity.RESULT_OK) {
                 new Thread(new Runnable() { // To not block the UI
                     @Override
@@ -505,10 +508,10 @@ public class EditFeedsListFragment extends ListFragment {
                             try { // Try to read it directly as an InputStream (for Google Drive)
                                 OPML.importFromFile(MainApplication.getContext().getContentResolver().openInputStream(data.getData()));
                             } catch (Exception unused) {
-                                EditFeedsListFragment.this.getActivity().runOnUiThread(new Runnable() {
+                                getActivity().runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        UiUtils.showMessage(EditFeedsListFragment.this.getActivity(), R.string.error_feed_import);
+                                        UiUtils.showMessage(getActivity(), R.string.error_feed_import);
                                     }
                                 });
                             }
@@ -516,7 +519,7 @@ public class EditFeedsListFragment extends ListFragment {
                     }
                 }).start();
             } else {
-                this.displayCustomFilePicker();
+                displayCustomFilePicker();
             }
         }
 
@@ -524,7 +527,7 @@ public class EditFeedsListFragment extends ListFragment {
     }
 
     private void displayCustomFilePicker() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this.getActivity());
+        final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 
         builder.setTitle(R.string.select_file);
 
@@ -535,20 +538,20 @@ public class EditFeedsListFragment extends ListFragment {
                     return new File(dir, filename).isFile();
                 }
             });
-            builder.setItems(fileNames, new OnClickListener() {
+            builder.setItems(fileNames, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, final int which) {
                     new Thread(new Runnable() { // To not block the UI
                         @Override
                         public void run() {
                             try {
-                                OPML.importFromFile(Environment.getExternalStorageDirectory() + File.separator
+                                OPML.importFromFile(Environment.getExternalStorageDirectory().toString() + File.separator
                                         + fileNames[which]);
                             } catch (Exception e) {
-                                EditFeedsListFragment.this.getActivity().runOnUiThread(new Runnable() {
+                                getActivity().runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        UiUtils.showMessage(EditFeedsListFragment.this.getActivity(), R.string.error_feed_import);
+                                        UiUtils.showMessage(getActivity(), R.string.error_feed_import);
                                     }
                                 });
                             }
@@ -558,7 +561,7 @@ public class EditFeedsListFragment extends ListFragment {
             });
             builder.show();
         } catch (Exception unused) {
-            UiUtils.showMessage(this.getActivity(), R.string.error_feed_import);
+            UiUtils.showMessage(getActivity(), R.string.error_feed_import);
         }
     }
 
@@ -570,12 +573,12 @@ public class EditFeedsListFragment extends ListFragment {
             try {
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.setType("text/*");
-                this.startActivityForResult(intent, EditFeedsListFragment.REQUEST_PICK_OPML_FILE);
+                startActivityForResult(intent, REQUEST_PICK_OPML_FILE);
             } catch (Exception unused) { // Else use a custom file selector
-                this.displayCustomFilePicker();
+                displayCustomFilePicker();
             }
         } else {
-            UiUtils.showMessage(this.getActivity(), R.string.error_external_storage_not_available);
+            UiUtils.showMessage(getActivity(), R.string.error_external_storage_not_available);
         }
     }
 
@@ -587,28 +590,28 @@ public class EditFeedsListFragment extends ListFragment {
                 @Override
                 public void run() {
                     try {
-                        final String filename = Environment.getExternalStorageDirectory() + "/Flym_"
+                        final String filename = Environment.getExternalStorageDirectory().toString() + "/Flym_"
                                 + System.currentTimeMillis() + ".opml";
 
                         OPML.exportToFile(filename);
-                        EditFeedsListFragment.this.getActivity().runOnUiThread(new Runnable() {
+                        getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                UiUtils.showMessage(EditFeedsListFragment.this.getActivity(), String.format(EditFeedsListFragment.this.getString(R.string.message_exported_to), filename));
+                                UiUtils.showMessage(getActivity(), String.format(getString(R.string.message_exported_to), filename));
                             }
                         });
                     } catch (Exception e) {
-                        EditFeedsListFragment.this.getActivity().runOnUiThread(new Runnable() {
+                        getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                UiUtils.showMessage(EditFeedsListFragment.this.getActivity(), R.string.error_feed_export);
+                                UiUtils.showMessage(getActivity(), R.string.error_feed_export);
                             }
                         });
                     }
                 }
             }).start();
         } else {
-            UiUtils.showMessage(this.getActivity(), R.string.error_external_storage_not_available);
+            UiUtils.showMessage(getActivity(), R.string.error_external_storage_not_available);
         }
     }
 }

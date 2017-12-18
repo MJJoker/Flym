@@ -44,6 +44,7 @@
 
 package net.fred.feedex.view;
 
+import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -52,6 +53,7 @@ import android.net.Uri;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -117,21 +119,22 @@ public class EntryView extends WebView {
     private static final String LINK_BUTTON_END = "</a></p>";
     private static final String IMAGE_ENCLOSURE = "[@]image/";
 
+    private final JavaScriptObject mInjectedJSObject = new JavaScriptObject();
     private EntryViewManager mEntryViewMgr;
 
     public EntryView(Context context) {
         super(context);
-        this.init();
+        init();
     }
 
     public EntryView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        this.init();
+        init();
     }
 
     public EntryView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
-        this.init();
+        init();
     }
 
     public void setListener(EntryViewManager manager) {
@@ -179,66 +182,71 @@ public class EntryView extends WebView {
             dateStringBuilder.append(" &mdash; ").append(author);
         }
 
-        content.append(dateStringBuilder).append(SUBTITLE_END).append(contentText).append(BUTTON_SECTION_START); //.append(BUTTON_START);
+        content.append(dateStringBuilder).append(SUBTITLE_END).append(contentText).append(BUTTON_SECTION_START).append(BUTTON_START);
 
-//        if (!preferFullText) {
-//            content.append(context.getString(R.string.get_full_text)).append(BUTTON_MIDDLE).append("injectedJSObject.onClickFullText();");
-//        } else {
-//            content.append(context.getString(R.string.original_text)).append(BUTTON_MIDDLE).append("injectedJSObject.onClickOriginalText();");
-//        }
-//        content.append(BUTTON_END);
+        if (!preferFullText) {
+            content.append(context.getString(R.string.get_full_text)).append(BUTTON_MIDDLE).append("injectedJSObject.onClickFullText();");
+        } else {
+            content.append(context.getString(R.string.original_text)).append(BUTTON_MIDDLE).append("injectedJSObject.onClickOriginalText();");
+        }
+        content.append(BUTTON_END);
 
-//        if (enclosure != null && enclosure.length() > 6 && !enclosure.contains(IMAGE_ENCLOSURE)) {
-//            content.append(BUTTON_START).append(context.getString(R.string.see_enclosure)).append(BUTTON_MIDDLE)
-//                    .append("injectedJSObject.onClickEnclosure();").append(BUTTON_END);
-//        }
-
-        if (link.length() > 0) {
-            content.append(LINK_BUTTON_START).append(link).append(LINK_BUTTON_MIDDLE).append(context.getString(R.string.see_link)).append(EntryView.LINK_BUTTON_END);
+        if (enclosure != null && enclosure.length() > 6 && !enclosure.contains(IMAGE_ENCLOSURE)) {
+            content.append(BUTTON_START).append(context.getString(R.string.see_enclosure)).append(BUTTON_MIDDLE)
+                    .append("injectedJSObject.onClickEnclosure();").append(BUTTON_END);
         }
 
-        content.append(EntryView.BUTTON_SECTION_END).append(EntryView.BODY_END);
+        if (link.length() > 0) {
+            content.append(LINK_BUTTON_START).append(link).append(LINK_BUTTON_MIDDLE).append(context.getString(R.string.see_link)).append(LINK_BUTTON_END);
+        }
+
+        content.append(BUTTON_SECTION_END).append(BODY_END);
 
         return content.toString();
     }
 
+    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     private void init() {
         // For scrolling
-        this.setHorizontalScrollBarEnabled(false);
-        this.getSettings().setUseWideViewPort(false);
+        setHorizontalScrollBarEnabled(false);
+        getSettings().setUseWideViewPort(false);
 
         // For color
-        this.setBackgroundColor(Color.parseColor(EntryView.BACKGROUND_COLOR));
+        setBackgroundColor(Color.parseColor(BACKGROUND_COLOR));
 
         // Text zoom level from preferences
         int fontSize = Integer.parseInt(PrefUtils.getString(PrefUtils.FONT_SIZE, "0"));
         if (fontSize != 0) {
-            this.getSettings().setTextZoom(100 + (fontSize * 20));
+            getSettings().setTextZoom(100 + (fontSize * 20));
         }
 
+        // For javascript
+        getSettings().setJavaScriptEnabled(true);
+        addJavascriptInterface(mInjectedJSObject, mInjectedJSObject.toString());
+
         // For HTML5 video
-        this.setWebChromeClient(new WebChromeClient() {
+        setWebChromeClient(new WebChromeClient() {
             private View mCustomView;
-            private CustomViewCallback mCustomViewCallback;
+            private WebChromeClient.CustomViewCallback mCustomViewCallback;
 
             @Override
-            public void onShowCustomView(View view, WebChromeClient.CustomViewCallback callback) {
+            public void onShowCustomView(View view, CustomViewCallback callback) {
                 // if a view already exists then immediately terminate the new one
-                if (this.mCustomView != null) {
+                if (mCustomView != null) {
                     callback.onCustomViewHidden();
                     return;
                 }
 
-                FrameLayout videoLayout = EntryView.this.mEntryViewMgr.getVideoLayout();
+                FrameLayout videoLayout = mEntryViewMgr.getVideoLayout();
                 if (videoLayout != null) {
-                    this.mCustomView = view;
+                    mCustomView = view;
 
-                    EntryView.this.setVisibility(View.GONE);
+                    setVisibility(View.GONE);
                     videoLayout.setVisibility(View.VISIBLE);
                     videoLayout.addView(view);
-                    this.mCustomViewCallback = callback;
+                    mCustomViewCallback = callback;
 
-                    EntryView.this.mEntryViewMgr.onStartVideoFullScreen();
+                    mEntryViewMgr.onStartVideoFullScreen();
                 }
             }
 
@@ -246,33 +254,33 @@ public class EntryView extends WebView {
             public void onHideCustomView() {
                 super.onHideCustomView();
 
-                if (this.mCustomView == null) {
+                if (mCustomView == null) {
                     return;
                 }
 
-                FrameLayout videoLayout = EntryView.this.mEntryViewMgr.getVideoLayout();
+                FrameLayout videoLayout = mEntryViewMgr.getVideoLayout();
                 if (videoLayout != null) {
-                    EntryView.this.setVisibility(View.VISIBLE);
+                    setVisibility(View.VISIBLE);
                     videoLayout.setVisibility(View.GONE);
 
                     // Hide the custom view.
-                    this.mCustomView.setVisibility(View.GONE);
+                    mCustomView.setVisibility(View.GONE);
 
                     // Remove the custom view from its container.
-                    videoLayout.removeView(this.mCustomView);
-                    this.mCustomViewCallback.onCustomViewHidden();
+                    videoLayout.removeView(mCustomView);
+                    mCustomViewCallback.onCustomViewHidden();
 
-                    this.mCustomView = null;
+                    mCustomView = null;
 
-                    EntryView.this.mEntryViewMgr.onEndVideoFullScreen();
+                    mEntryViewMgr.onEndVideoFullScreen();
                 }
             }
         });
 
-        this.setWebViewClient(new WebViewClient() {
+        setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                Context context = EntryView.this.getContext();
+                Context context = getContext();
                 try {
                     if (url.startsWith(Constants.FILE_SCHEME)) {
                         File file = new File(url.replace(Constants.FILE_SCHEME, ""));
@@ -307,5 +315,28 @@ public class EntryView extends WebView {
         void onEndVideoFullScreen();
 
         FrameLayout getVideoLayout();
+    }
+
+    private class JavaScriptObject {
+        @Override
+        @JavascriptInterface
+        public String toString() {
+            return "injectedJSObject";
+        }
+
+        @JavascriptInterface
+        public void onClickOriginalText() {
+            mEntryViewMgr.onClickOriginalText();
+        }
+
+        @JavascriptInterface
+        public void onClickFullText() {
+            mEntryViewMgr.onClickFullText();
+        }
+
+        @JavascriptInterface
+        public void onClickEnclosure() {
+            mEntryViewMgr.onClickEnclosure();
+        }
     }
 }

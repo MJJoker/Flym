@@ -48,8 +48,8 @@ import net.fred.feedex.R;
 import net.fred.feedex.adapter.DrawerAdapter;
 import net.fred.feedex.fragment.EntriesListFragment;
 import net.fred.feedex.parser.OPML;
-import net.fred.feedex.provider.FeedData;
 import net.fred.feedex.provider.FeedData.EntryColumns;
+import net.fred.feedex.provider.FeedData.FeedColumns;
 import net.fred.feedex.service.AutoRefreshService;
 import net.fred.feedex.service.FetcherService;
 import net.fred.feedex.utils.PrefUtils;
@@ -62,7 +62,7 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
     private static final String STATE_CURRENT_DRAWER_POS = "STATE_CURRENT_DRAWER_POS";
 
     private static final String FEED_UNREAD_NUMBER = "(SELECT " + Constants.DB_COUNT + " FROM " + EntryColumns.TABLE_NAME + " WHERE " +
-            EntryColumns.IS_READ + " IS NULL AND " + EntryColumns.FEED_ID + '=' + FeedData.FeedColumns.TABLE_NAME + '.' + FeedData.FeedColumns._ID + ')';
+            EntryColumns.IS_READ + " IS NULL AND " + EntryColumns.FEED_ID + '=' + FeedColumns.TABLE_NAME + '.' + FeedColumns._ID + ')';
 
     private static final int LOADER_ID = 0;
     private static final int PERMISSIONS_REQUEST_IMPORT_FROM_OPML = 1;
@@ -112,7 +112,7 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
                 if (id > 0) {
-                    startActivity(new Intent(Intent.ACTION_EDIT).setData(FeedData.FeedColumns.CONTENT_URI(id)));
+                    startActivity(new Intent(Intent.ACTION_EDIT).setData(FeedColumns.CONTENT_URI(id)));
                     return true;
                 }
                 return false;
@@ -192,7 +192,7 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
     }
 
     public void onClickAdd(View view) {
-        startActivity(new Intent(Intent.ACTION_INSERT).setData(FeedData.FeedColumns.CONTENT_URI));
+        startActivity(new Intent(Intent.ACTION_INSERT).setData(FeedColumns.CONTENT_URI));
     }
 
     public void onClickSettings(View view) {
@@ -218,8 +218,8 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
 
     @Override
     public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
-        CursorLoader cursorLoader = new CursorLoader(this, FeedData.FeedColumns.GROUPED_FEEDS_CONTENT_URI, new String[]{FeedData.FeedColumns._ID, FeedData.FeedColumns.URL, FeedData.FeedColumns.NAME,
-                FeedData.FeedColumns.IS_GROUP, FeedData.FeedColumns.ICON, FeedData.FeedColumns.LAST_UPDATE, FeedData.FeedColumns.ERROR, HomeActivity.FEED_UNREAD_NUMBER}, null, null, null
+        CursorLoader cursorLoader = new CursorLoader(this, FeedColumns.GROUPED_FEEDS_CONTENT_URI, new String[]{FeedColumns._ID, FeedColumns.URL, FeedColumns.NAME,
+                FeedColumns.IS_GROUP, FeedColumns.ICON, FeedColumns.LAST_UPDATE, FeedColumns.ERROR, FEED_UNREAD_NUMBER}, null, null, null
         );
         cursorLoader.setUpdateThrottle(Constants.UPDATE_THROTTLE_DELAY);
         return cursorLoader;
@@ -227,17 +227,17 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
 
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        if (this.mDrawerAdapter != null) {
-            this.mDrawerAdapter.setCursor(cursor);
+        if (mDrawerAdapter != null) {
+            mDrawerAdapter.setCursor(cursor);
         } else {
-            this.mDrawerAdapter = new DrawerAdapter(this, cursor);
-            this.mDrawerList.setAdapter(this.mDrawerAdapter);
+            mDrawerAdapter = new DrawerAdapter(this, cursor);
+            mDrawerList.setAdapter(mDrawerAdapter);
 
             // We don't have any menu yet, we need to display it
-            this.mDrawerList.post(new Runnable() {
+            mDrawerList.post(new Runnable() {
                 @Override
                 public void run() {
-                    HomeActivity.this.selectDrawerItem(HomeActivity.this.mCurrentDrawerPos);
+                    selectDrawerItem(mCurrentDrawerPos);
                 }
             });
         }
@@ -245,11 +245,11 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
 
     @Override
     public void onLoaderReset(Loader<Cursor> cursorLoader) {
-        this.mDrawerAdapter.setCursor(null);
+        mDrawerAdapter.setCursor(null);
     }
 
     private void selectDrawerItem(int position) {
-        this.mCurrentDrawerPos = position;
+        mCurrentDrawerPos = position;
 
         Uri newUri;
         boolean showFeedInfo = true;
@@ -265,8 +265,8 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
                 newUri = EntryColumns.FAVORITES_CONTENT_URI;
                 break;
             default:
-                long feedOrGroupId = this.mDrawerAdapter.getItemId(position);
-                if (this.mDrawerAdapter.isItemAGroup(position)) {
+                long feedOrGroupId = mDrawerAdapter.getItemId(position);
+                if (mDrawerAdapter.isItemAGroup(position)) {
                     newUri = EntryColumns.ENTRIES_FOR_GROUP_CONTENT_URI(feedOrGroupId);
                 } else {
                     newUri = EntryColumns.ENTRIES_FOR_FEED_CONTENT_URI(feedOrGroupId);
@@ -303,10 +303,10 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
                     getSupportActionBar().setTitle(R.string.unread_entries);
                     break;
                 case 1:
-                    this.getSupportActionBar().setTitle(R.string.all_entries);
+                    getSupportActionBar().setTitle(R.string.all_entries);
                     break;
                 case 2:
-                    this.getSupportActionBar().setTitle(R.string.favorites);
+                    getSupportActionBar().setTitle(R.string.favorites);
                     break;
                 default:
                     getSupportActionBar().setTitle(mTitle);
@@ -321,7 +321,7 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case PERMISSIONS_REQUEST_IMPORT_FROM_OPML:
+            case PERMISSIONS_REQUEST_IMPORT_FROM_OPML: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     new Thread(new Runnable() { // To not block the UI
@@ -335,6 +335,8 @@ public class HomeActivity extends BaseActivity implements LoaderManager.LoaderCa
                         }
                     }).start();
                 }
+                return;
+            }
         }
     }
 }

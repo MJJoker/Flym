@@ -55,7 +55,7 @@ public class AboutActivity extends BaseActivity {
         titleView.setText(title);
 
         TextView contentView = (TextView) findViewById(R.id.about_content);
-        contentView.setText(Html.fromHtml(getString(R.string.about_us_content), Html.FROM_HTML_MODE_LEGACY));
+        contentView.setText(Html.fromHtml(getString(R.string.about_us_content)));
     }
 
     @Override
