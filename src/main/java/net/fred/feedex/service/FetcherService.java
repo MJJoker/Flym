@@ -45,7 +45,7 @@
 package net.fred.feedex.service;
 
 import android.app.IntentService;
-import android.app.Notification;
+import android.app.Notification.Builder;
 import android.app.PendingIntent;
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
@@ -66,6 +66,9 @@ import android.widget.Toast;
 import net.fred.feedex.Constants;
 import net.fred.feedex.MainApplication;
 import net.fred.feedex.R;
+import net.fred.feedex.R.drawable;
+import net.fred.feedex.R.mipmap;
+import net.fred.feedex.R.plurals;
 import net.fred.feedex.activity.HomeActivity;
 import net.fred.feedex.parser.RssAtomParser;
 import net.fred.feedex.provider.FeedData;
@@ -173,7 +176,7 @@ public class FetcherService extends IntentService {
         boolean isFromAutoRefresh = intent.getBooleanExtra(Constants.FROM_AUTO_REFRESH, false);
 
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        final NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
         // Connectivity issue, we quit
         if (networkInfo == null || networkInfo.getState() != NetworkInfo.State.CONNECTED) {
             if (ACTION_REFRESH_FEEDS.equals(intent.getAction()) && !isFromAutoRefresh) {
@@ -203,7 +206,7 @@ public class FetcherService extends IntentService {
         } else { // == Constants.ACTION_REFRESH_FEEDS
             PrefUtils.putBoolean(PrefUtils.IS_REFRESHING, true);
 
-            long keepTime = Long.parseLong(PrefUtils.getString(PrefUtils.KEEP_TIME, "4")) * 86400000l;
+            long keepTime = Long.parseLong(PrefUtils.getString(PrefUtils.KEEP_TIME, "4")) * 86400000L;
             long keepDateBorderTime = keepTime > 0 ? System.currentTimeMillis() - keepTime : 0;
 
             deleteOldEntries(keepDateBorderTime);
@@ -220,20 +223,20 @@ public class FetcherService extends IntentService {
                     cursor.close();
 
                     if (newCount > 0) {
-                        String text = getResources().getQuantityString(R.plurals.number_of_new_entries, newCount, newCount);
+                        String text = this.getResources().getQuantityString(plurals.number_of_new_entries, newCount, newCount);
 
-                        Intent notificationIntent = new Intent(FetcherService.this, HomeActivity.class);
-                        PendingIntent contentIntent = PendingIntent.getActivity(FetcherService.this, 0, notificationIntent,
+                        Intent notificationIntent = new Intent(this, HomeActivity.class);
+                        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent,
                                 PendingIntent.FLAG_UPDATE_CURRENT);
 
-                        Notification.Builder notifBuilder = new Notification.Builder(MainApplication.getContext()) //
+                        Builder notifBuilder = new Builder(MainApplication.getContext()) //
                                 .setContentIntent(contentIntent) //
-                                .setSmallIcon(R.drawable.ic_statusbar_rss) //
-                                .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher)) //
+                                .setSmallIcon(drawable.ic_statusbar_rss) //
+                                .setLargeIcon(BitmapFactory.decodeResource(this.getResources(), mipmap.ic_launcher)) //
                                 .setTicker(text) //
                                 .setWhen(System.currentTimeMillis()) //
                                 .setAutoCancel(true) //
-                                .setContentTitle(getString(R.string.flym_feeds)) //
+                                .setContentTitle(this.getString(R.string.flym_feeds)) //
                                 .setContentText(text) //
                                 .setLights(0xffffffff, 0, 0);
 
@@ -259,15 +262,15 @@ public class FetcherService extends IntentService {
                 }
             }
 
-            mobilizeAllEntries();
-            downloadAllImages();
+            this.mobilizeAllEntries();
+            this.downloadAllImages();
 
             PrefUtils.putBoolean(PrefUtils.IS_REFRESHING, false);
         }
     }
 
     private void mobilizeAllEntries() {
-        ContentResolver cr = getContentResolver();
+        ContentResolver cr = this.getContentResolver();
         Cursor cursor = cr.query(TaskColumns.CONTENT_URI, new String[]{TaskColumns._ID, TaskColumns.ENTRY_ID, TaskColumns.NUMBER_ATTEMPT},
                 TaskColumns.IMG_URL_TO_DL + Constants.DB_IS_NULL, null, null);
 
@@ -334,7 +337,7 @@ public class FetcherService extends IntentService {
                             success = true;
                             operations.add(ContentProviderOperation.newDelete(TaskColumns.CONTENT_URI(taskId)).build());
                             if (imgUrlsToDownload != null && !imgUrlsToDownload.isEmpty()) {
-                                addImagesToDownload(String.valueOf(entryId), imgUrlsToDownload);
+                                FetcherService.addImagesToDownload(String.valueOf(entryId), imgUrlsToDownload);
                             }
                         }
                     } catch (Throwable e) {
@@ -352,7 +355,7 @@ public class FetcherService extends IntentService {
             entryCursor.close();
 
             if (!success) {
-                if (nbAttempt + 1 > MAX_TASK_ATTEMPT) {
+                if (nbAttempt + 1 > FetcherService.MAX_TASK_ATTEMPT) {
                     operations.add(ContentProviderOperation.newDelete(TaskColumns.CONTENT_URI(taskId)).build());
                 } else {
                     ContentValues values = new ContentValues();
@@ -394,7 +397,7 @@ public class FetcherService extends IntentService {
                 // If we are here, everything is OK
                 operations.add(ContentProviderOperation.newDelete(TaskColumns.CONTENT_URI(taskId)).build());
             } catch (Exception e) {
-                if (nbAttempt + 1 > MAX_TASK_ATTEMPT) {
+                if (nbAttempt + 1 > FetcherService.MAX_TASK_ATTEMPT) {
                     operations.add(ContentProviderOperation.newDelete(TaskColumns.CONTENT_URI(taskId)).build());
                 } else {
                     ContentValues values = new ContentValues();
@@ -426,10 +429,10 @@ public class FetcherService extends IntentService {
 
     private int refreshFeeds(final long keepDateBorderTime) {
         ContentResolver cr = getContentResolver();
-        final Cursor cursor = cr.query(FeedColumns.CONTENT_URI, FeedColumns.PROJECTION_ID, null, null, null);
+        Cursor cursor = cr.query(FeedColumns.CONTENT_URI, FeedColumns.PROJECTION_ID, null, null, null);
         int nbFeed = cursor.getCount();
 
-        ExecutorService executor = Executors.newFixedThreadPool(THREAD_NUMBER, new ThreadFactory() {
+        ExecutorService executor = Executors.newFixedThreadPool(FetcherService.THREAD_NUMBER, new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
                 Thread t = new Thread(r);
@@ -446,7 +449,7 @@ public class FetcherService extends IntentService {
                 public Integer call() {
                     int result = 0;
                     try {
-                        result = refreshFeed(feedId, keepDateBorderTime);
+                        result = FetcherService.this.refreshFeed(feedId, keepDateBorderTime);
                     } catch (Exception ignored) {
                     }
                     return result;
@@ -472,7 +475,7 @@ public class FetcherService extends IntentService {
     private int refreshFeed(String feedId, long keepDateBorderTime) {
         RssAtomParser handler = null;
 
-        ContentResolver cr = getContentResolver();
+        ContentResolver cr = this.getContentResolver();
         Cursor cursor = cr.query(FeedColumns.CONTENT_URI(feedId), null, null, null, null);
 
         if (cursor.moveToFirst()) {
@@ -498,21 +501,21 @@ public class FetcherService extends IntentService {
                 handler.setFetchImages(NetworkUtils.needDownloadPictures());
 
                 if (fetchMode == 0) {
-                    if (contentType != null && contentType.startsWith(CONTENT_TYPE_TEXT_HTML)) {
+                    if (contentType != null && contentType.startsWith(FetcherService.CONTENT_TYPE_TEXT_HTML)) {
                         BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
                         String line;
                         int posStart = -1;
 
                         while ((line = reader.readLine()) != null) {
-                            if (line.contains(HTML_BODY)) {
+                            if (line.contains(FetcherService.HTML_BODY)) {
                                 break;
                             } else {
-                                Matcher matcher = FEED_LINK_PATTERN.matcher(line);
+                                Matcher matcher = FetcherService.FEED_LINK_PATTERN.matcher(line);
 
                                 if (matcher.find()) { // not "while" as only one link is needed
                                     line = matcher.group();
-                                    posStart = line.indexOf(HREF);
+                                    posStart = line.indexOf(FetcherService.HREF);
 
                                     if (posStart > -1) {
                                         String url = line.substring(posStart + 6, line.indexOf('"', posStart + 10)).replace(Constants.AMP_SG,
@@ -550,19 +553,19 @@ public class FetcherService extends IntentService {
                     }
 
                     if (contentType != null) {
-                        int index = contentType.indexOf(CHARSET);
+                        int index = contentType.indexOf(FetcherService.CHARSET);
 
                         if (index > -1) {
                             int index2 = contentType.indexOf(';', index);
 
                             try {
                                 Xml.findEncodingByName(index2 > -1 ? contentType.substring(index + 8, index2) : contentType.substring(index + 8));
-                                fetchMode = FETCHMODE_DIRECT;
+                                fetchMode = FetcherService.FETCHMODE_DIRECT;
                             } catch (UnsupportedEncodingException ignored) {
-                                fetchMode = FETCHMODE_REENCODE;
+                                fetchMode = FetcherService.FETCHMODE_REENCODE;
                             }
                         } else {
-                            fetchMode = FETCHMODE_REENCODE;
+                            fetchMode = FetcherService.FETCHMODE_REENCODE;
                         }
 
                     } else {
@@ -577,18 +580,18 @@ public class FetcherService extends IntentService {
                         connection.disconnect();
                         connection = NetworkUtils.setupConnection(connection.getURL());
 
-                        int start = xmlDescription.indexOf(ENCODING);
+                        int start = xmlDescription.indexOf(FetcherService.ENCODING);
 
                         if (start > -1) {
                             try {
                                 Xml.findEncodingByName(xmlDescription.substring(start + 10, xmlDescription.indexOf('"', start + 11)));
-                                fetchMode = FETCHMODE_DIRECT;
+                                fetchMode = FetcherService.FETCHMODE_DIRECT;
                             } catch (UnsupportedEncodingException ignored) {
-                                fetchMode = FETCHMODE_REENCODE;
+                                fetchMode = FetcherService.FETCHMODE_REENCODE;
                             }
                         } else {
                             // absolutely no encoding information found
-                            fetchMode = FETCHMODE_DIRECT;
+                            fetchMode = FetcherService.FETCHMODE_DIRECT;
                         }
                     }
 
@@ -599,9 +602,9 @@ public class FetcherService extends IntentService {
 
                 switch (fetchMode) {
                     default:
-                    case FETCHMODE_DIRECT: {
+                    case FetcherService.FETCHMODE_DIRECT:
                         if (contentType != null) {
-                            int index = contentType.indexOf(CHARSET);
+                            int index = contentType.indexOf(FetcherService.CHARSET);
 
                             int index2 = contentType.indexOf(';', index);
 
@@ -614,8 +617,7 @@ public class FetcherService extends IntentService {
                             Xml.parse(reader, handler);
                         }
                         break;
-                    }
-                    case FETCHMODE_REENCODE: {
+                    case FetcherService.FETCHMODE_REENCODE:
                         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                         InputStream inputStream = connection.getInputStream();
 
@@ -628,7 +630,7 @@ public class FetcherService extends IntentService {
 
                         String xmlText = outputStream.toString();
 
-                        int start = xmlText != null ? xmlText.indexOf(ENCODING) : -1;
+                        int start = xmlText != null ? xmlText.indexOf(FetcherService.ENCODING) : -1;
 
                         if (start > -1) {
                             Xml.parse(
@@ -638,7 +640,7 @@ public class FetcherService extends IntentService {
                         } else {
                             // use content type
                             if (contentType != null) {
-                                int index = contentType.indexOf(CHARSET);
+                                int index = contentType.indexOf(FetcherService.CHARSET);
 
                                 if (index > -1) {
                                     int index2 = contentType.indexOf(';', index);
@@ -656,7 +658,6 @@ public class FetcherService extends IntentService {
                             }
                         }
                         break;
-                    }
                 }
 
                 connection.disconnect();
@@ -667,7 +668,7 @@ public class FetcherService extends IntentService {
                     // resets the fetch mode to determine it again later
                     values.put(FeedColumns.FETCH_MODE, 0);
 
-                    values.put(FeedColumns.ERROR, getString(R.string.error_feed_error));
+                    values.put(FeedColumns.ERROR, this.getString(R.string.error_feed_error));
                     cr.update(FeedColumns.CONTENT_URI(id), values, null, null);
                 }
             } catch (Throwable e) {
@@ -677,7 +678,7 @@ public class FetcherService extends IntentService {
                     // resets the fetch mode to determine it again later
                     values.put(FeedColumns.FETCH_MODE, 0);
 
-                    values.put(FeedColumns.ERROR, e.getMessage() != null ? e.getMessage() : getString(R.string.error_feed_process));
+                    values.put(FeedColumns.ERROR, e.getMessage() != null ? e.getMessage() : this.getString(R.string.error_feed_process));
                     cr.update(FeedColumns.CONTENT_URI(id), values, null, null);
                 }
             } finally {
